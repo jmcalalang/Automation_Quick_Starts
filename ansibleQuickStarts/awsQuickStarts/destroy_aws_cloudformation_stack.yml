@@ -1,0 +1,30 @@
+---
+# Modules Used
+
+# https://docs.ansible.com/ansible/latest/modules/cloudformation_module.html
+# https://docs.ansible.com/ansible/latest/modules/cloudformation_info_module.html
+# https://docs.ansible.com/ansible/latest/user_guide/playbooks_delegation.html 
+
+# Ansible Information
+- name: Set Ansible Information
+  hosts: localhost
+  gather_facts: False
+  connection: local
+  vars:
+    stack_name: ""
+
+# Destroy AWS infrastruture cloudformation stack
+  tasks:
+    - name: Destroy AWS infrastruture cloudformation stack
+      cloudformation:
+        stack_name: "{{ stack_name }}"
+        state: absent
+
+    - name: Get summary information about a stack     
+      cloudformation_info:
+        stack_name: "{{ stack_name }}"
+      register: "DeleteCloudformationOutput"
+
+    - name: Output the stack information to ~/
+      local_action: 
+        copy content={{ DeleteCloudformationOutput }} dest=~/ansible-delete-cloudformation-output.txt 

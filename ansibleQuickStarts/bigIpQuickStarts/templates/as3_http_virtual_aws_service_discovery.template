@@ -1,0 +1,62 @@
+{
+    "class": "AS3",
+    "action": "deploy",
+    "persist": true,
+    "declaration": {
+        "class": "ADC",
+        "schemaVersion": "3.14.0",
+        "id": "{{ serviceName }}-id",
+        "label": "{{ serviceName }}-label",
+        "remark": "Simple HTTP application with round robin pool",
+        "{{ serviceName }}": {
+            "class": "Tenant",
+            "defaultRouteDomain": 0,
+            "Application_1": {
+                "class": "Application",
+                "template": "generic",
+                "{{ serviceName }}_service_address": {
+                    "class": "Service_Address",
+                    "virtualAddress": "{{ virtualAddresses }}",
+                    "trafficGroup": "none"
+                },
+                "{{ serviceName }}": {
+                    "class": "Service_Generic",
+                    "virtualAddresses": [
+                        {
+                            "use": "{{ serviceName }}_service_address"
+                        }
+                    ],
+                    "virtualPort": 80,
+                    "pool": "{{ serviceName }}_pl"
+                },
+                "{{ serviceName }}_pl": {
+                    "class": "Pool",
+                    "monitors": [
+                        "http"
+                    ],
+                    "members": [
+                        {
+                            "servicePort": 80,
+                            "addressDiscovery": "aws",
+                            "updateInterval": 10,
+                            "tagKey": "{{ tagKey }}",
+                            "tagValue": "{{ tagValue }}",
+                            "addressRealm": "public",
+                            "region": "us-west-2",
+                            "accessKeyId": "{{ accessKeyId }}",
+                            "secretAccessKey": "{{ secretAccessKey }}",
+                            "credentialUpdate": false
+                        },
+                        {
+                            "enable": true,
+                            "servicePort": 80,
+                            "serverAddresses": [
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

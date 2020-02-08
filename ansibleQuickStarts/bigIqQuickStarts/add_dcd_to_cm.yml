@@ -1,0 +1,45 @@
+# Add a BIG-IQ DCD to a BIG-IQ CM
+
+
+
+- name: Get {{bigIq01}} Authentication Token
+  delegate_to: localhost
+  uri:
+    body: '{"username":"{{bigIq01Admin}}","password":"{{bigIq01Password}}","loginProvidername":"tmos"}'
+    body_format: json
+    method: POST
+    url: "https://{{ bigIq01_mgmt_pip }}/mgmt/shared/authn/login"
+    status_code: 200
+    validate_certs: no
+  register: bigIq01_auth_response
+
+- name: Assign Auth Token to Variable
+  set_fact:
+    bigIq01_auth_token: "{{ bigIq01_auth_response.json.token.token }}"
+
+- name: Add {{ bigIq02_int_pri_ip }} DCD to CM
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/cm/shared/esmgmt/add-node"
+    method: POST
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      address": "{{ bigIq02_int_pri_ip }}"
+      bigIqUsername: "{{ bigIq02Admin }}"
+      bigIqPassword: "{{ bigIq02Password }}"
+      httpPort": 9200
+      transportAddress: "{{ bigIq02_int_pri_ip }}"
+      transportPort: 9300
+      zone: "Azure_Zone"
+    body_format: json
+
+- name: Webhook Notification to Teams for BIG-IP {{ bigIq02_int_pri_ip }} add as DCD
+  delegate_to: localhost
+  uri:
+    body: "{\"text\": \"BIG-IQ {{ bigIq02_int_pri_ip }} has been added as a DCD into BIG-IQ {{ bigIq01_mgmt_pip }}\"}"
+    body_format: json
+    method: POST
+    status_code: 200
+    url: "{{teams_webhook}}"
+    validate_certs: no

@@ -1,0 +1,48 @@
+---
+# Modules Used
+
+# https://docs.ansible.com/ansible/latest/modules/cloudformation_module.html
+# https://docs.ansible.com/ansible/latest/modules/cloudformation_info_module.html
+# https://docs.ansible.com/ansible/latest/user_guide/playbooks_delegation.html 
+
+# Ansible Information
+- name: Set Ansible Information
+  hosts: localhost
+  gather_facts: False
+  connection: local
+  vars:
+    stack_name: ""
+    #More variables below
+
+# Launch AWS infrastruture cloudformation stack
+  tasks:
+    - name: create a stack, pass in the template via lookup template
+      cloudformation:
+        stack_name: "{{ stack_name }}"
+        state: present
+        region: us-west-2
+        disable_rollback: false
+        template: "../templates/f5-network-only-2AZ-for-3nic-bigip.template"
+        template_parameters:
+          allowUsageAnalytics: "Yes"
+          application: "f5app"
+          availabilityZone1: "us-west-2a"
+          availabilityZone2: "us-west-2b"
+#         bigIpModules: "ltm:nominal"
+          costcenter: "f5costcenter"
+          customImageId: "OPTIONAL"
+          declarationUrl: "none"
+          environment: "f5env"
+          group: "f5group"
+          owner: "f5owner"
+        tags:
+          Stack: ansible-cloudformations
+
+    - name: Get summary information about a stack     
+      cloudformation_info:
+        stack_name: "{{ stack_name }}"
+      register: "InfrastructureCloudformationOutput"
+
+    - name: Output the stack information to ~/
+      local_action: 
+        copy content={{ InfrastructureCloudformationOutput }} dest=~/ansible-infrastructure-cloudformation-output.txt 

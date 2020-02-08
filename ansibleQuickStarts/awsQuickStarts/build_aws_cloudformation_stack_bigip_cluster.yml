@@ -1,0 +1,66 @@
+---
+# Modules Used
+
+# https://docs.ansible.com/ansible/latest/modules/cloudformation_module.html
+# https://docs.ansible.com/ansible/latest/modules/cloudformation_info_module.html
+# https://docs.ansible.com/ansible/latest/user_guide/playbooks_delegation.html 
+
+# Ansible Information
+- name: Set Ansible Information
+  hosts: localhost
+  gather_facts: False
+  connection: local
+  vars:
+    stack_name: ""
+    sshKey: ""
+    restrictedSrcAddress: ""
+    restrictedSrcAddressApp: ""
+    Vpc: ""
+    managementSubnetAz1: ""
+    subnet1Az1: ""
+    subnet2Az1: ""
+    #defined variables below
+
+# Launch AWS bigip cloudformation stack
+  tasks:
+    - name: Deploy AWS BIGIP Cluster
+      cloudformation:
+        stack_name: "{{ stack_name }}"
+        state: present
+        region: us-west-2
+        disable_rollback: false
+        template_url: "https://f5-cft.s3.amazonaws.com/f5-existing-stack-same-az-cluster-payg-3nic-bigip.template"
+        template_parameters:
+          sshKey: "{{ sshKey }}"
+          restrictedSrcAddress: "{{ restrictedSrcAddress }}"
+          restrictedSrcAddressApp: "{{ restrictedSrcAddressApp }}"
+          Vpc: "{{ Vpc }}"
+          managementSubnetAz1: "{{ managementSubnetAz1 }}"
+          subnet1Az1: "{{ subnet1Az1 }}"
+          subnet2Az1: "{{ subnet2Az1 }}"
+          provisionPublicIP: "Yes"
+          imageName: "Best1000Mbps"
+          customImageId: "OPTIONAL"
+          instanceType: "m5.xlarge"
+          ntpServer: "0.pool.ntp.org"
+          timezone: "UTC"
+          bigIpModules: "ltm:nominal,asm:nominal"
+          application: "f5app"
+          environment: "f5env"
+          group: "f5group"
+          owner: "f5owner"
+          costcenter: "f5costcenter"
+          allowUsageAnalytics: "Yes"
+          declarationUrl: "none"
+
+        tags:
+          Stack: ansible-cloudformations
+
+    - name: Get summary information about a stack
+      cloudformation_info:
+        stack_name: "{{ stack_name }}"
+      register: "BigipCloudformationOutput"
+      
+    - name: Output the stack information to ~/
+      local_action: 
+        copy content={{ BigipCloudformationOutput }} dest=~/ansible-bigip-cloudformation-output.txt

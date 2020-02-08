@@ -1,0 +1,11 @@
+# Test Webhook Role
+
+- name: Webhook Notification to Teams for Build
+  delegate_to: localhost
+  uri:
+    body: { "@context": "http://schema.org/extensions", "@type": "MessageCard", "themeColor": "0072C6", "title": "**New Environment Created in Resource Group {{resource_group_name}}**", "text": "Click **BIG-IP Button** to be taken to a BIGIP!", "potentialAction": [ { "@type": "OpenUri", "name": "BIG-IP 1", "targets": [ { "os": "default", "uri": "https://{{resource_group_name}}-0.{{location}}.cloudapp.azure.com" } ] }, { "@type": "OpenUri", "name": "BIG-IP 2", "targets": [ { "os": "default", "uri": "https://{{resource_group_name}}-1.{{location}}.cloudapp.azure.com" } ] } ] }
+    body_format: json
+    method: POST
+    status_code: 200
+    url: "{{teams_webhook}}"
+    validate_certs: no

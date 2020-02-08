@@ -1,0 +1,68 @@
+---
+# Modules Used
+
+# https://docs.ansible.com/ansible/latest/modules/azure_rm_resourcegroup.html
+# https://docs.ansible.com/ansible/latest/modules/azure_rm_virtualnetwork.html
+# https://docs.ansible.com/ansible/latest/user_guide/azure_rm_subnet.html 
+# https://docs.ansible.com/ansible/latest/user_guide/uri.html 
+
+# Ansible Information
+- name: Set Ansible Information
+  hosts: localhost
+  gather_facts: False
+  connection: local
+  vars:
+    resource_group_name: ""
+    virtual_network_name: "{{resource_group_name}}-virtual-network"
+    virtual_network_address_prefix: "10.128.0.0/16"
+    managemenet_subnet: "management"
+    management_address_prefix_cidr: "10.128.1.0/24"
+    external_subnet: "external"
+    external_address_prefix_cidr: "10.128.10.0/24"
+    internal_subnet: "internal"
+    internal_address_prefix_cidr: "10.128.20.0/24"
+
+# Launch AWS bigip cloudformation stack
+  tasks:
+    - name: Create {{resource_group_name}} Resource Group
+      azure_rm_resourcegroup:
+        name: "{{resource_group_name}}"
+        location: "{{location}}"
+
+    - name: Create {{virtual_network_name}}
+      azure_rm_virtualnetwork:
+        location: "{{location}}"
+        resource_group: "{{resource_group_name}}"
+        name: "{{virtual_network_name}}"
+        address_prefixes: "{{virtual_network_address_prefix}}"
+
+    - name: Create {{managemenet_subnet}} Subnet
+      azure_rm_subnet:
+        resource_group: "{{resource_group_name}}"
+        name: "{{managemenet_subnet}}"
+        address_prefix_cidr: "{{management_address_prefix_cidr}}"
+        virtual_network_name: "{{virtual_network_name}}"
+
+    - name: Create {{external_subnet}} Subnet
+      azure_rm_subnet:
+        resource_group: "{{resource_group_name}}"
+        name: "{{external_subnet}}"
+        address_prefix_cidr: "{{external_address_prefix_cidr}}"
+        virtual_network_name: "{{virtual_network_name}}"
+
+    - name: Create {{internal_subnet}} Subnet
+      azure_rm_subnet:
+        resource_group: "{{resource_group_name}}"
+        name: "{{internal_subnet}}"
+        address_prefix_cidr: "{{internal_address_prefix_cidr}}"
+        virtual_network_name: "{{virtual_network_name}}"
+
+    - name: Webhook Notification to Teams for Build of Resource Group {{resource_group_name}}
+      delegate_to: localhost
+      uri:
+        body: "{\"text\": \"Resource Group {{resource_group_name}} was created in the {{location}} region!\"}"
+        body_format: json
+        method: POST
+        status_code: 200
+        url: "{{teams_webhook}}"
+        validate_certs: no

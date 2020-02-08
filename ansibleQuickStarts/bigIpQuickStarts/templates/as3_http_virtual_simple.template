@@ -1,0 +1,46 @@
+{
+	"class": "AS3",
+	"action": "deploy",
+	"declaration": {
+		"class": "ADC",
+		"schemaVersion": "3.4.0",
+		"id": "{{ serviceName }}_id",
+		"label": "{{ serviceName }}_label",
+		"remark": "{{ serviceName }}_remark",
+		"{{ serviceName }}": {
+			"class": "Tenant",
+			"{{ serviceName }}_vs": {
+				"class": "Application",
+				"template": "http",
+				"serviceMain": {
+					"class": "Service_HTTP",
+					"virtualAddresses": [
+						"{{ frontEnd }}"
+					],
+					"snat": "auto",
+					"pool": "{{ serviceName }}_pl"
+				},
+				"{{ serviceName }}_pl": {
+					"class": "Pool",
+					"monitors": [
+						"http"
+					],
+					"members": [{
+							"servicePort": {{ backEndMember1Port }},
+							"serverAddresses": [
+								"{{ backEndMember1IP }}"
+							]
+						},
+						{
+							"servicePort": {{ backEndMember2Port }},
+							"serverAddresses": [
+								"{{ backEndMember2IP }}"
+							]
+						}
+
+					]
+				}
+			}
+		}
+	}
+}

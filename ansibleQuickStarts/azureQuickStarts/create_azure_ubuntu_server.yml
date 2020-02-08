@@ -1,0 +1,117 @@
+---
+# Modules Used
+
+# https://docs.ansible.com/ansible/latest/modules/azure_rm_storageaccount.html
+# https://docs.ansible.com/ansible/latest/modules/azure_rm_networkinterface.html
+# https://docs.ansible.com/ansible/latest/user_guide/azure_rm_securitygroup.html
+# https://docs.ansible.com/ansible/latest/user_guide/azure_rm_virtualmachine.html
+# https://docs.ansible.com/ansible/latest/user_guide/azure_rm_virtualmachine_extension.html
+# https://docs.ansible.com/ansible/latest/user_guide/set_fact.html
+# https://docs.ansible.com/ansible/latest/user_guide/uri.html
+
+# Ansible Information
+- name: Set Ansible Information
+  hosts: localhost
+  gather_facts: False
+  connection: local
+  vars:
+    applicationbuildscript: "https://raw.githubusercontent.com/jmcalalang/f5-rs-azure/master/roles/server/files/init_web.sh"
+    application_storage_account: "{{application_server_name}}stract"
+    application_server_int_pri_ip: ""
+    internal_subnet: "internal"
+    restrictedSrcAddress: "*"
+    virtual_network_name: "{{resource_group_name}}-virtual-network"
+
+# Launch AWS bigip cloudformation stack
+  tasks:
+    - name: Create {{application_server_name}} Storage Account in Resource Group {{resource_group_name}}
+      azure_rm_storageaccount:
+        location: "{{location}}"
+        resource_group: "{{resource_group_name}}"
+        name: "{{application_storage_account}}"
+        account_type: Standard_LRS
+
+    - name: Create {{application_server_name}} Internal NIC in Resource Group {{resource_group_name}}
+      azure_rm_networkinterface:
+        resource_group: "{{resource_group_name}}"
+        name: "{{application_server_name}}_int_nic"
+        virtual_network: "{{virtual_network_name}}"
+        subnet: "{{internal_subnet}}"
+        ip_configurations:
+          - name: ipconfig1
+            private_ip_allocation_method: Dynamic
+            public_ip_address_name: "{{application_server_name}}-int-pip0"
+      register: "app_server_int_nic_private"
+
+    - name: Edit {{application_server_name}}_int_nic Security Group in Resource Group {{resource_group_name}} (Allow HTTP(S) Access)
+      azure_rm_securitygroup:
+          resource_group: "{{resource_group_name}}"
+          name: "{{application_server_name}}_int_nic"
+          purge_rules: yes
+          rules:
+              - name: 'AllowHTTP'
+                protocol: Tcp
+                source_address_prefix: '{{restrictedSrcAddress}}'
+                destination_port_range: "8080"
+                access: Allow
+                priority: 100
+                direction: Inbound
+              - name: 'AllowSSH'
+                protocol: Tcp
+                source_address_prefix: '{{restrictedSrcAddress}}'
+                destination_port_range: 22
+                access: Allow
+                priority: 101
+                direction: Inbound
+
+    - name: Create {{application_server_name}} Virtual Machine
+      azure_rm_virtualmachine:
+        location: "{{location}}"
+        resource_group: "{{resource_group_name}}"
+        name: "{{application_server_name}}"
+        vm_size: Standard_D1_v2
+        storage_account: "{{application_storage_account}}"
+        storage_container: "{{application_server_name}}001"
+        storage_blob: "{{application_server_name}}001.vhd"
+        admin_username: "{{ApplicationAdminUsername}}"
+        admin_password: "{{ApplicationAdminPassword}}"
+        network_interfaces: "{{application_server_name}}_int_nic"
+        append_tags: True
+        tags:
+          OperatingSystem: "Ubuntu"
+          OperatingSystemVersion: "18.04-LTS"
+          Applications: "All"
+        image:
+          offer: UbuntuServer
+          publisher: Canonical
+          sku: 18.04-LTS
+          version: latest
+
+    - name: Execute {{application_server_name}} Azure Extension
+      azure_rm_virtualmachine_extension:
+        location: "{{location}}"
+        name: External-Script-to-install-Backend-Services
+        resource_group: "{{resource_group_name}}"
+        virtual_machine_name: "{{application_server_name}}"
+        publisher: Microsoft.Azure.Extensions
+        virtual_machine_extension_type: CustomScript
+        type_handler_version: 2.0
+        settings: '{"fileUris": ["{{applicationbuildscript}}"],"commandToExecute": "./init_web.sh"}'
+        auto_upgrade_minor_version: true
+
+    - name: Assign {{bigIq01}}_int_nic Fact
+      set_fact:
+        application_server_int_pri_ip: "{{ app_server_int_nic_private.state.ip_configuration.private_ip_address }}"
+
+    - debug:
+        msg: Registered "{{ app_server_int_nic_private.state.ip_configuration.private_ip_address }}" as Internal NIC Private IP
+
+    - name: Webhook Notification to Teams for Build of Server {{application_server_name}}
+      delegate_to: localhost
+      uri:
+        body: "{\"text\": \"Application Server {{application_server_name}} was created in Resource Group {{resource_group_name}} with Private Address {{application_server_int_pri_ip}}!\"}"
+        body_format: json
+        method: POST
+        status_code: 200
+        url: "{{teams_webhook}}"
+        validate_certs: no

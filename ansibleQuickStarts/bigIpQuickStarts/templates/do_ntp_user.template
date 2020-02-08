@@ -1,0 +1,38 @@
+{
+    "schemaVersion": "1.8.0",
+    "class": "Device",
+    "async": true,
+    "label": "Basic onboarding",
+    "Common": {
+        "class": "Tenant",
+        "myNtp": {
+            "class": "NTP",
+            "servers": [
+                "0.pool.ntp.org",
+                "1.pool.ntp.org",
+                "2.pool.ntp.org"
+            ],
+            "timezone": "America/Denver"
+        },
+        "user1": {
+            "class": "User",
+            "userType": "regular",
+            "password": "user1Password",
+            "partitionAccess": {
+                "Common": {
+                    "role": "guest"
+                }
+            }
+        },
+        "user2": {
+            "class": "User",
+            "userType": "regular",
+            "password": "user2Password",
+            "partitionAccess": {
+                "Common": {
+                    "role": "guest"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,136 @@
+# Discovery and Import a BIG-IP to a BIG-IQ
+
+- name: Get {{bigIq01}} Authentication Token
+  delegate_to: localhost
+  uri:
+    body: '{"username":"{{bigIq01Admin}}","password":"{{bigIq01Password}}","loginProvidername":"tmos"}'
+    body_format: json
+    method: POST
+    url: "https://{{ bigIq01_mgmt_pip }}/mgmt/shared/authn/login"
+    status_code: 200
+    validate_certs: no
+  register: bigIq01_auth_response
+
+- name: Assign Auth Token to Variable
+  set_fact:
+    bigIq01_auth_token: "{{ bigIq01_auth_response.json.token.token }}"
+
+- name: Establish {{ bigIp_mgmt_pip }} Device Trust
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/cm/global/tasks/device-trust"
+    method: POST
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      address: "{{ bigIp_mgmt_pip }}"
+      httpsPort: 443
+      userName: "{{ BIGIPadminUsername }}"
+      password: "{{ BIGIPadminPassword }}"
+      clusterName: "{{ resource_group_name }}_Cluster"
+#      useBigiqSync: false
+#      deployWhenDscChangesPending: false
+#      name: "trust_{{ bigIp_mgmt_pip }}"
+    body_format: json
+
+- name: Gather {{ bigIp_mgmt_pip }} BIG-IP machineId Fact
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/shared/resolver/device-groups/cm-bigip-cluster_Azure_Cluster/devices"
+    method: GET
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body_format: json
+  register: "bigIp_machineId"
+
+- name: Assign {{ bigIp_mgmt_pip }} machineId Fact
+  set_fact:
+    bigIp_machineId: "{{ bigIp_machineId.json.items.machineId }}"
+
+- debug:
+    msg: Registered "{{ bigIp_machineId.json.items.machineId }}" as machineId
+
+- name: Discover {{ bigIp_mgmt_pip }} services
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/cm/global/tasks/device-discovery"
+    method: POST
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      moduleList:
+       module: "adc_core"
+       module: "asm"
+       module: "fps"
+       module: "security_shared"
+#      name: "discovery_{{ bigIp_mgmt_pip }}"
+      deviceReference:
+       link: "https://localhost/mgmt/cm/system/machineid-resolver/{{ bigIp_machineId }}"
+    body_format: json
+
+- name: Import {{ bigIp_mgmt_pip }} Local Traffic
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/cm/adc-core/tasks/declare-mgmt-authority"
+    method: POST
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+#      createChildTasks: false
+#      skipDiscovery: true
+      deviceReference:
+       link: "https://localhost/mgmt/cm/system/machineid-resolver/{{ bigIp_machineId }}"
+#      snapshotWorkingConfig: false
+#      useBigiqSync: false
+#      deployWhenDscChangesPending: false
+#      name: "import-adc_core_{{ bigIp_mgmt_pip }}"
+#      clusterName: "{{ resource_group_name }}_Cluster"
+    body_format: json
+
+- name: Import {{ bigIp_mgmt_pip }} Web Application Security
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/cm/asm/tasks/declare-mgmt-authority"
+    method: POST
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+#      createChildTasks: false
+#      skipDiscovery: true
+      deviceReference:
+       link: "https://localhost/mgmt/cm/system/machineid-resolver/{{ bigIp_machineId }}"
+#      snapshotWorkingConfig: false
+#      useBigiqSync: false
+#      deployWhenDscChangesPending: false
+#      name: "import-adc_core_{{ bigIp_mgmt_pip }}"
+#      clusterName: "{{ resource_group_name }}_Cluster"
+    body_format: json
+
+- name: Import {{ bigIp_mgmt_pip }} Fraud Protection Service
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/cm/websafe/tasks/declare-mgmt-authority"
+    method: POST
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+#      createChildTasks: false
+#      skipDiscovery: true
+      deviceReference:
+       link: "https://localhost/mgmt/cm/system/machineid-resolver/{{ bigIp_machineId }}"
+#      snapshotWorkingConfig: false
+#      useBigiqSync: false
+#      deployWhenDscChangesPending: false
+#      name: "import-adc_core_{{ bigIp_mgmt_pip }}"
+#      clusterName: "{{ resource_group_name }}_Cluster"
+    body_format: json
+
+- name: Webhook Notification to Teams for BIG-IP {{ bigIp_mgmt_pip }} Discovery and Import
+  delegate_to: localhost
+  uri:
+    body: "{\"text\": \"BIG-IP {{ bigIp_mgmt_pip }} has been Discovered and Imported into BIG-IQ {{ bigIq01_mgmt_pip }}\"}"
+    body_format: json
+    method: POST
+    status_code: 200
+    url: "{{teams_webhook}}"
+    validate_certs: no

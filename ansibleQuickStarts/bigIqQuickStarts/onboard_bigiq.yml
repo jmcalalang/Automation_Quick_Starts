@@ -1,0 +1,123 @@
+# Onboard a BIG-IQ 2 NIC installation with CM Personality
+
+- name: Get {{bigIq01}} Authentication Token
+  delegate_to: localhost
+  uri:
+    body: '{"username":"{{bigIq01Admin}}","password":"{{bigIq01Password}}","loginProvidername":"tmos"}'
+    body_format: json
+    method: POST
+    url: "https://{{ bigIq01_mgmt_pip }}/mgmt/shared/authn/login"
+    status_code: 200
+    validate_certs: no
+  register: bigIq01_auth_response
+
+- name: Assign Auth Token to Variable
+  set_fact:
+    bigIq01_auth_token: "{{ bigIq01_auth_response.json.token.token }}"
+
+- name: License {{bigIq01}}
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/tm/sys/license"
+    method: POST
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      command: "install"
+      registrationKey: "{{ bigIq01License }}"
+    body_format: json
+
+- name: Set {{bigIq01}} Personality
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/cm/system/provisioning"
+    method: POST
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      systemPersonality: "{{ bigIq01_systemPersonality }}"
+    body_format: json
+
+- name: Execute {{bigIq01}} "easy-setup"
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/shared/system/easy-setup"
+    method: PATCH
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      hostname: "{{bigIq01}}.iq"
+      internalSelfIpAddresses: ["{{ bigIq01_discoveryAddress }}/24"]
+      ntpServerAddresses: ["0.pool.ntp.org"]
+    body_format: json
+
+- name: Set {{bigIq01}} Discovery Address
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/shared/identified-devices/config/discovery"
+    method: PUT
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      discoveryAddress: "{{ bigIq01_discoveryAddress }}"
+    body_format: json
+
+- name: Set {{bigIq01}} masterKey
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/cm/shared/secure-storage/masterkey"
+    method: POST
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      passphrase: "{{bigIqHostPassphrase}}"
+    body_format: json
+
+- name: Set {{bigIq01}} Admin Credentials
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/shared/authz/users"
+    method: PUT
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      name: "{{ bigIq01Admin }}"
+      oldPassword: "{{ bigIq01Password }}"
+      password: "{{ bigIq01Password }}"
+      password2: "{{ bigIq01Password }}"
+      encryptedPassword: null
+    body_format: json
+
+- name: Close {{bigIq01}} Wizard
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/shared/system/setup"
+    method: PATCH
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      isSystemSetup: true
+      isRootPasswordChanged: true
+      isAdminPasswordChanged: true
+    body_format: json
+
+- name: Restart {{bigIq01}} Services
+  uri:
+    url: "https://{{bigIq01_mgmt_pip}}/mgmt/shared/failover-state"
+    method: PATCH
+    validate_certs: no
+    headers:
+      X-F5-Auth-Token: "{{ bigIq01_auth_token }}"
+    body:
+      restart: true
+    body_format: json
+
+- name: Webhook Notification to Teams for Operational status of BIG-IQ {{bigIq01}}
+  delegate_to: localhost
+  uri:
+    body: "{\"text\": \"BIG-IQ {{bigIq01}} has been operationalized and is ready for configuration\"}"
+    body_format: json
+    method: POST
+    status_code: 200
+    url: "{{teams_webhook}}"
+    validate_certs: no
