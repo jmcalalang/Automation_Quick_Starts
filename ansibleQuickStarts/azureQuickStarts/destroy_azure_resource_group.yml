@@ -1,0 +1,32 @@
+---
+# Modules Used
+
+# https://docs.ansible.com/ansible/latest/modules/azure_rm_resourcegroup.html
+# https://docs.ansible.com/ansible/latest/user_guide/uri.html
+
+# Ansible Information
+- name: Set Ansible Information
+  hosts: localhost
+  gather_facts: False
+  connection: local
+  vars:
+    resource_group_name: ""
+    teams_webhook: ""
+
+# Launch AWS bigip cloudformation stack
+  tasks:
+    - name: Delete "{{resource_group_name}}" Resource Group
+      azure_rm_resourcegroup:
+        name: "{{resource_group_name}}"
+        state: absent
+        force: yes
+
+    - name: Webhook Notification to Teams for Destruction
+      delegate_to: localhost
+      uri:
+        body: "{\"text\": \"Resource Group {{resource_group_name}} and all its contents were destroyed!\"}"
+        body_format: json
+        method: POST
+        status_code: 200
+        url: "{{teams_webhook}}"
+        validate_certs: no

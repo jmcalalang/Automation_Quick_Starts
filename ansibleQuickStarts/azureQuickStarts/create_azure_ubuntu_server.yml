@@ -21,6 +21,7 @@
     admin_username: ""
     admin_password: ""
     restrictedSrcAddress: "*"
+    teams_webhook: ""
     applicationbuildscript: "https://raw.githubusercontent.com/jmcalalang/automationQuickStarts/master/ansibleQuickStarts/azureQuickStarts/templates/init_web.sh"
     application_storage_account: "{{application_server_name}}stract"
     internal_subnet: "internal"
@@ -100,7 +101,7 @@
         publisher: Microsoft.Azure.Extensions
         virtual_machine_extension_type: CustomScript
         type_handler_version: 2.0
-        settings: '{"fileUris": ["{{applicationbuildscript}}"],"commandToExecute": "./init_web.sh"}'
+        settings: '{"fileUris": ["{{applicationbuildscript}}"],"commandToExecute": "sudo bash init_web.sh"}'
         auto_upgrade_minor_version: true
 
     - name: Assign {{bigIq01}}_int_nic Fact
