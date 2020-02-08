@@ -12,6 +12,7 @@
   connection: local
   vars:
     stack_name: ""
+    region: ""
     #More variables below
 
 # Launch AWS infrastruture cloudformation stack
@@ -20,14 +21,14 @@
       cloudformation:
         stack_name: "{{ stack_name }}"
         state: present
-        region: us-west-2
+        region: {{region}}
         disable_rollback: false
-        template: "../templates/f5-network-only-2AZ-for-3nic-bigip.template"
+        template: "templates/f5-network-only-2AZ-for-3nic-bigip.template"
         template_parameters:
           allowUsageAnalytics: "Yes"
           application: "f5app"
-          availabilityZone1: "us-west-2a"
-          availabilityZone2: "us-west-2b"
+          availabilityZone1: "{{region}}a"
+          availabilityZone2: "{{region}}b"
 #         bigIpModules: "ltm:nominal"
           costcenter: "f5costcenter"
           customImageId: "OPTIONAL"
