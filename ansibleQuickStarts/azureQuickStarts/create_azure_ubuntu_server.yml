@@ -15,11 +15,15 @@
   gather_facts: False
   connection: local
   vars:
-    applicationbuildscript: "https://raw.githubusercontent.com/jmcalalang/f5-rs-azure/master/roles/server/files/init_web.sh"
-    application_storage_account: "{{application_server_name}}stract"
-    application_server_int_pri_ip: ""
-    internal_subnet: "internal"
+    resource_group_name: ""
+    location: ""
+    application_server_name: ""
+    admin_username: ""
+    admin_password: ""
     restrictedSrcAddress: "*"
+    applicationbuildscript: "https://raw.githubusercontent.com/jmcalalang/automationQuickStarts/master/ansibleQuickStarts/azureQuickStarts/templates/init_web.sh"
+    application_storage_account: "{{application_server_name}}stract"
+    internal_subnet: "internal"
     virtual_network_name: "{{resource_group_name}}-virtual-network"
 
 # Launch AWS bigip cloudformation stack
@@ -73,8 +77,8 @@
         storage_account: "{{application_storage_account}}"
         storage_container: "{{application_server_name}}001"
         storage_blob: "{{application_server_name}}001.vhd"
-        admin_username: "{{ApplicationAdminUsername}}"
-        admin_password: "{{ApplicationAdminPassword}}"
+        admin_username: "{{admin_username}}"
+        admin_password: "{{admin_password}}"
         network_interfaces: "{{application_server_name}}_int_nic"
         append_tags: True
         tags:
