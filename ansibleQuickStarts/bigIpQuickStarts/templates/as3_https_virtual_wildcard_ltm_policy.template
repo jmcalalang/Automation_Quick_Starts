@@ -29,12 +29,15 @@
                     },
                     "FQDN_Pool": {
                         "class": "Pool",
+                        "monitors": [
+                            "icmp"
+                        ],
                         "members": [
                             {
                                 "servicePort": 80,
                                 "addressDiscovery": "fqdn",
                                 "autoPopulate": true,
-                                "hostname": "www.nginx.org"
+                                "hostname": "nginx.org"
                             }
                         ]
                     },
@@ -62,6 +65,14 @@
                                             "pool": {
                                                 "use": "FQDN_Pool"
                                             }
+                                        }
+                                    },
+                                    {
+                                        "type": "httpHeader",
+                                        "event": "request",
+                                        "replace": {
+                                            "name": "HOST",
+                                            "value": "nginx.org"
                                         }
                                     }
                                 ]
