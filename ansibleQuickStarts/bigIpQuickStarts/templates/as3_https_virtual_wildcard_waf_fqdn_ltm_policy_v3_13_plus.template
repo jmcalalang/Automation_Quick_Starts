@@ -20,6 +20,9 @@
                         ],
                         "serverTLS": "TLS_Offload",
                         "policyEndpoint": "Forward_Policy",
+                        "policyWAF": {
+                            "use": "autoScaleAS3Template_OWASP_Auto_Tune"
+                        },
                         "persistenceMethods": [
                             "cookie"
                         ],
