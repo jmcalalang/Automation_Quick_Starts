@@ -4,7 +4,7 @@
         "persist": true,
         "declaration": {
             "class": "ADC",
-            "schemaVersion": "3.5.0",
+            "schemaVersion": "3.13.0",
             "id": "autoScaleAS3Template_id",
             "label": "autoScaleAS3Template_label",
             "remark": "autoScaleAS3Template_remark",
