@@ -1,0 +1,29 @@
+---
+# Modules Used
+
+# https://docs.ansible.com/ansible/latest/modules/azure_rm_resourcegroup.html
+# https://docs.ansible.com/ansible/latest/user_guide/uri.html
+
+# Ansible Information
+- name: Set Ansible Information
+  hosts: localhost
+  gather_facts: False
+  connection: local
+  vars:
+    resourceGroup: ""
+    azureNicName: ""
+    azureNicIpName: ""
+
+# Get NIC Information
+  tasks:
+    - name: Get facts for an azure NIC
+      azure_rm_networkinterface_info:
+        resource_group: "{{ resourceGroup }}"
+        name: "{{ azureNicName }}"
+      register: "{{ azureNicName }}Output"
+    
+    - set_fact: 
+        " {{ azureNicName }}_output_{{ azureNicIpName }}_ip ": "{{ {{ azureNicName }}Output | json_query('networkinterfaces[*].ip_configurations[?name==`{{ azureNicIpName }}`].private_ip_address') }}"
+
+    - debug:
+        msg: "{{ azureNicName }}_output_{{ azureNicIpName }}_ip"
