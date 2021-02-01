@@ -1,0 +1,98 @@
+---
+
+#    Created by - Jon Calalang
+#    This task comes with no warranty or support
+#
+
+- name: Build Virtual Address and attach APM Profile
+  hosts: localhost
+  gather_facts: False
+  connection: local
+
+  vars:
+    bigips: [bigip1.fqdn.com,bigip2.fqdn.com]
+    provider:
+      server: '{{ item }}'
+      user: 'admin'
+      password: 'password'
+      validate_certs: no
+      server_port: 443
+    partition: 'Common'
+    state: 'present'
+
+  tasks:
+# Delete Objects
+
+    - name: Wait a maximum of 300 seconds for BIG-IP to be ready to take configuration
+      bigip_wait:
+        timeout: 300
+        provider: '{{ provider }}'
+      delegate_to: localhost
+      when: state == "absent"
+      with_items:
+        - '{{ bigips }}'
+
+    - name: Delete virtual server
+      bigip_virtual_server:
+        name: ansible-virtual-server
+        provider: '{{ provider }}'
+        partition: '{{ partition }}'
+        state: '{{ state }}'
+      delegate_to: localhost
+      when: state == "absent"
+      with_items:
+        - '{{ bigips }}'
+
+    - name: Save the running configuration of the BIG-IP
+      bigip_config:
+        save: yes
+        provider: '{{ provider }}'
+      delegate_to: localhost
+      when: state == "absent"
+      with_items:
+        - '{{ bigips }}'
+
+# Create Objects
+
+    - name: Wait a maximum of 300 seconds for BIG-IP to be ready to take configuration
+      bigip_wait:
+        timeout: 300
+        provider: '{{ provider }}'
+      delegate_to: localhost
+      when: state == "present"
+      with_items:
+        - '{{ bigips }}'
+
+    - name: Add virtual server
+      bigip_virtual_server:
+        name: ansible-virtual-server
+        destination: 10.10.10.10
+        port: 443
+        description: Test Virtual Server
+        profiles:
+        - http
+        - APM_1_Local_Profile
+        - APM_1_Local_Connectivity
+        - vdi # Needed for RDP
+        - webacceleration # Needed for Portal
+        - rewrite # Needed for Portal
+        - name: clientssl
+          context: client-side
+        - name: serverssl # Needed for RDP
+          context: server-side # Needed for RDP
+        provider: '{{ provider }}'
+        partition: '{{ partition }}'
+        state: '{{ state }}'
+      delegate_to: localhost
+      when: state == "present"
+      with_items:
+        - '{{ bigips }}'
+
+    - name: Save the running configuration of the BIG-IP
+      bigip_config:
+        save: yes
+        provider: '{{ provider }}'
+      delegate_to: localhost
+      when: state == "present"
+      with_items:
+        - '{{ bigips }}'
