@@ -30,7 +30,7 @@
                     "FQDN_Pool": {
                         "class": "Pool",
                         "monitors": [
-                            "icmp"
+                            "tcp"
                         ],
                         "members": [
                             {
